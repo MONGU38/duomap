@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위치짝 - 두 장소 거리 확인</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #FF6B35;
+    --primary-dark: #E85520;
+    --secondary: #2C3E50;
+    --accent: #F7C948;
+    --bg: #F8F5F0;
+    --card: #FFFFFF;
+    --text: #1A1A2E;
+    --muted: #8A8A9A;
+    --marker-a: #FF4444;
+    --marker-b: #2266FF;
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nanum Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 헤더 */
+  header {
+    background: var(--secondary);
+    color: white;
+    padding: 14px 20px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+  header .logo {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  header .logo span { color: var(--primary); }
+  header .subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 1px;
+  }
+  header .pin-icon {
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  /* 입력 영역 */
+  .input-section {
+    background: var(--card);
+    padding: 16px 16px 12px;
+    box-shadow: var(--shadow);
+    border-bottom: 3px solid var(--primary);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .input-group {
+    flex: 1;
+    position: relative;
+  }
+
+  .input-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dot-a { color: var(--marker-a); }
+  .dot-b { color: var(--marker-b); }
+
+  .input-group input {
+    width: 100%;
+    border: 2px solid #E0E0EA;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Nanum Gothic', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #FAFAFA;
+  }
+  .input-group input:focus {
+    border-color: var(--primary);
+    background: #fff;
+  }
+  .input-group input.error { border-color: #FF4444; }
+
+  .arrow-divider {
+    font-size: 20px;
+    color: var(--muted);
+    margin-top: 22px;
+    flex-shrink: 0;
+  }
+
+  .btn-search {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 800;
+    font-family: 'Nanum Gothic', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: -0.3px;
+  }
+  .btn-search:active { background: var(--primary-dark); transform: scale(0.98); }
+  .btn-search:disabled { background: #ccc; cursor: not-allowed; }
+
+  /* 결과 배너 */
+  .result-banner {
+    display: none;
+    background: var(--secondary);
+    color: white;
+    padding: 10px 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .result-banner.show { display: flex; }
+  .result-banner .places-summary {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    flex: 1;
+    min-width: 0;
+  }
+  .result-banner .places-summary b { color: white; }
+  .result-banner .distance-badge {
+    background: var(--accent);
+    color: var(--text);
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 17px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* 대안 선택 */
+  .alt-section {
+    display: none;
+    background: #FFF8F5;
+    border-top: 1px solid #FFE0D0;
+    padding: 10px 16px;
+  }
+  .alt-section.show { display: block; }
+  .alt-title {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .alt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .alt-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1.5px solid #E0E0EA;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    font-size: 12px;
+  }
+  .alt-item:hover { border-color: var(--primary); }
+  .alt-item.selected { border-color: var(--marker-b); background: #EFF4FF; }
+  .alt-item .alt-name { flex: 1; font-weight: 700; }
+  .alt-item .alt-addr { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+  .alt-item .alt-dist { color: var(--marker-b); font-weight: 800; font-size: 11px; white-space: nowrap; }
+
+  /* 지도 */
+  #map {
+    flex: 1;
+    min-height: 340px;
+  }
+
+  /* 로딩 오버레이 */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .loading-overlay.show { display: flex; }
+  .loading-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .loading-text { color: white; font-weight: 700; font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 에러 메시지 */
+  .error-msg {
+    display: none;
+    background: #FFF0F0;
+    border-left: 4px solid #FF4444;
+    color: #CC0000;
+    font-size: 12px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border-radius: 0 8px 8px 0;
+  }
+  .error-msg.show { display: block; }
+
+  /* 초기 지도 안내 */
+  .map-placeholder {
+    flex: 1;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    background: #F0EDE8;
+  }
+  .map-placeholder .big-icon { font-size: 52px; }
+  .map-placeholder p { font-size: 13px; font-weight: 700; }
+
+  /* 반응형 */
+  @media (min-width: 600px) {
+    .input-row { gap: 12px; }
+    #map, .map-placeholder { min-height: 450px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pin-icon">📍</div>
+  <div>
+    <div class="logo">위치<span>짝</span></div>
+    <div class="subtitle">두 장소의 거리를 한눈에</div>
+  </div>
+</header>
+
+<div class="input-section">
+  <div class="input-row">
+    <div class="input-group">
+      <div class="input-label dot-a">● 출발지 / 장소 A</div>
+      <input type="text" id="placeA" placeholder="예: 부산역" autocomplete="off">
+    </div>
+    <div class="arrow-divider">↔</div>
+    <div class="input-group">
+      <div class="input-label dot-b">● 목적지 / 장소 B</div>
+      <input type="text" id="placeB" placeholder="예: 롯데호텔 부산" autocomplete="off">
+    </div>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="btn-search" id="searchBtn" onclick="doSearch()">
+    🔍 거리 확인하기
+  </button>
+</div>
+
+<div class="result-banner" id="resultBanner">
+  <div class="places-summary" id="placesSummary"></div>
+  <div class="distance-badge" id="distanceBadge"></div>
+</div>
+
+<div class="alt-section" id="altSection">
+  <div class="alt-title">🔄 다른 <span id="altPlaceName"></span> 선택하기</div>
+  <div class="alt-list" id="altList"></div>
+</div>
+
+<div class="map-placeholder" id="mapPlaceholder">
+  <div class="big-icon">🗺️</div>
+  <p>장소를 입력하고 거리를 확인하세요</p>
+</div>
+<div id="map" style="display:none;"></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">위치 검색 중...</div>
+</div>
+
+
+<script>
+  let map = null;
+  let markerA = null, markerB = null;
+  let lineLayer = null;
+  let allResultsB = [];
+  let currentA = null, currentB = null;
+
+  function showLoading(v) {
+    document.getElementById('loadingOverlay').classList.toggle('show', v);
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.toggle('show', !!msg);
+  }
+
+  async function geocode(query) {
+    const key = '5a52f309367cebda2580e38890569355';
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=10`;
+    const res = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
+    const data = await res.json();
+    return data.documents || [];
+  }
+
+  function haversine(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const r = Math.PI / 180;
+    const dLat = (lat2 - lat1) * r;
+    const dLng = (lng2 - lng1) * r;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function formatDist(m) {
+    if (m < 1000) return Math.round(m) + 'm';
+    return (m / 1000).toFixed(1) + 'km';
+  }
+
+  function initMap(lat, lng) {
+    document.getElementById('mapPlaceholder').style.display = 'none';
+    document.getElementById('map').style.display = 'block';
+    if (map) { map.remove(); map = null; }
+    map = L.map('map').setView([lat, lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  }
+
+  function drawMap(posA, posB) {
+    initMap((posA.lat + posB.lat) / 2, (posA.lng + posB.lng) / 2);
+    if (markerA) map.removeLayer(markerA);
+    if (markerB) map.removeLayer(markerB);
+    if (lineLayer) map.removeLayer(lineLayer);
+
+    const makeIcon = (color, label) => L.divIcon({
+      className: '',
+      html: `<div style="background:${color};color:white;font-size:11px;font-weight:800;border:2.5px solid white;border-radius:50% 50% 50% 0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.3);"><span style="transform:rotate(45deg)">${label}</span></div>`,
+      iconSize: [32, 32], iconAnchor: [16, 32]
+    });
+
+    markerA = L.marker([posA.lat, posA.lng], { icon: makeIcon('#FF4444', 'A') })
+      .bindPopup(`<b style="color:#FF4444">A</b> ${posA.name}`).addTo(map);
+    markerB = L.marker([posB.lat, posB.lng], { icon: makeIcon('#2266FF', 'B') })
+      .bindPopup(`<b style="color:#2266FF">B</b> ${posB.name}`).addTo(map);
+
+    lineLayer = L.polyline([[posA.lat, posA.lng], [posB.lat, posB.lng]], {
+      color: '#FF6B35', weight: 2.5, dashArray: '6,5', opacity: 0.8
+    }).addTo(map);
+
+    const bounds = L.latLngBounds([[posA.lat, posA.lng], [posB.lat, posB.lng]]);
+    map.fitBounds(bounds, { padding: [55, 55] });
+  }
+
+  function showResult(posA, posB) {
+    const dist = haversine(posA.lat, posA.lng, posB.lat, posB.lng);
+    const banner = document.getElementById('resultBanner');
+    document.getElementById('placesSummary').innerHTML =
+      `<b style="color:#FF9999">A</b> ${posA.name} &nbsp;↔&nbsp; <b style="color:#99BBFF">B</b> ${posB.name}`;
+    document.getElementById('distanceBadge').textContent = '직선 ' + formatDist(dist);
+    banner.classList.add('show');
+    drawMap(posA, posB);
+  }
+
+  function selectAlt(idx) {
+    const posB = allResultsB[idx];
+    currentB = posB;
+    document.querySelectorAll('.alt-item').forEach((el, i) => {
+      el.classList.toggle('selected', i === idx);
+    });
+    showResult(currentA, posB);
+  }
+
+  async function doSearch() {
+    showError('');
+    const qA = document.getElementById('placeA').value.trim();
+    const qB = document.getElementById('placeB').value.trim();
+    if (!qA || !qB) {
+      showError('두 장소를 모두 입력해주세요.');
+      return;
+    }
+
+    showLoading(true);
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('altSection').classList.remove('show');
+
+    try {
+      const [resA, resB] = await Promise.all([geocode(qA), geocode(qB)]);
+
+      if (!resA.length) { showError(`"${qA}" 을(를) 찾을 수 없어요. 더 자세히 입력해보세요.`); return; }
+      if (!resB.length) { showError(`"${qB}" 을(를) 찾을 수 없어요. 더 자세히 입력해보세요.`); return; }
+
+      const posA = { lat: parseFloat(resA[0].y), lng: parseFloat(resA[0].x), name: resA[0].place_name };
+
+      allResultsB = resB.map(r => ({
+        lat: parseFloat(r.y), lng: parseFloat(r.x),
+        name: r.place_name,
+        addr: r.address_name
+      }));
+
+      // A에서 가장 가까운 B 자동 선택 + 반경 20km 필터
+      allResultsB.forEach(b => { b._dist = haversine(posA.lat, posA.lng, b.lat, b.lng); });
+      allResultsB = allResultsB.filter(b => b._dist <= 20000);
+      if (!allResultsB.length) {
+        showError(`"${qB}" 검색 결과가 A 위치 반경 20km 안에 없어요. 장소명을 더 구체적으로 입력해보세요.`);
+        return;
+      }
+      allResultsB.sort((a, b) => a._dist - b._dist);
+
+      currentA = posA;
+      currentB = allResultsB[0];
+      showResult(posA, allResultsB[0]);
+
+      // 대안이 2개 이상이면 선택 목록 표시
+      if (allResultsB.length > 1) {
+        document.getElementById('altPlaceName').textContent = qB;
+        const list = document.getElementById('altList');
+        list.innerHTML = '';
+        allResultsB.forEach((b, i) => {
+          const el = document.createElement('div');
+          el.className = 'alt-item' + (i === 0 ? ' selected' : '');
+          el.innerHTML = `
+            <span class="alt-name">${b.name}</span>
+            <span class="alt-addr">${b.addr}</span>
+            <span class="alt-dist">${formatDist(b._dist)}</span>
+          `;
+          el.onclick = () => selectAlt(i);
+          list.appendChild(el);
+        });
+        document.getElementById('altSection').classList.add('show');
+      }
+
+    } catch(e) {
+      showError('검색 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      showLoading(false);
+      document.getElementById('searchBtn').disabled = false;
+    }
+  }
+
+  // 엔터키 지원
+  ['placeA', 'placeB'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') doSearch();
+    });
+  });
+</script>
+</body>
+</html>
