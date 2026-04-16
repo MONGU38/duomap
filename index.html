@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>위치짝 - 두 장소 거리 확인</title>
+<title>위치짝 - 두 장소의 위치와 거리 확인</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Black+Han+Sans&display=swap" rel="stylesheet">
@@ -275,7 +275,7 @@
   <div class="pin-icon">📍</div>
   <div>
     <div class="logo">위치<span>짝</span></div>
-    <div class="subtitle">두 장소의 거리를 한눈에</div>
+    <div class="subtitle">두 장소의 위치와 거리를 한눈에</div>
   </div>
 </header>
 
@@ -293,7 +293,7 @@
   </div>
   <div class="error-msg" id="errorMsg"></div>
   <button class="btn-search" id="searchBtn" onclick="doSearch()">
-    🔍 거리 확인하기
+    🔍 두 곳의 위치와 거리 확인하기
   </button>
 </div>
 
@@ -306,10 +306,16 @@
   <div class="alt-title">🔄 다른 <span id="altPlaceName"></span> 선택하기</div>
   <div class="alt-list" id="altList"></div>
 </div>
-
+<div style="background:white;padding:10px 16px;border-bottom:1px solid #eee;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <div style="font-size:12px;font-weight:800;color:#2C3E50">📌 저장 목록</div>
+    <button onclick="saveResult()" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nanum Gothic',sans-serif;">이 결과 저장</button>
+  </div>
+  <div id="savedList"><div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div></div>
+</div>
 <div class="map-placeholder" id="mapPlaceholder">
   <div class="big-icon">🗺️</div>
-  <p>장소를 입력하고 거리를 확인하세요</p>
+  <p>장소를 입력하고 위치와 거리를 확인하세요</p>
 </div>
 <div id="map" style="display:none;"></div>
 
@@ -478,7 +484,39 @@
       document.getElementById('searchBtn').disabled = false;
     }
   }
+function saveResult() {
+    if (!currentA || !currentB) return;
+    const dist = haversine(currentA.lat, currentA.lng, currentB.lat, currentB.lng);
+    const item = {
+      id: Date.now(),
+      a: currentA.name,
+      b: currentB.name,
+      dist: formatDist(dist)
+    };
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+    list.unshift(item);
+    localStorage.setItem('위치짝', JSON.stringify(list));
+    renderSaved();
+  }
 
+  function deleteSaved(id) {
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
+    localStorage.setItem('위치짝', JSON.stringify(list));
+    renderSaved();
+  }
+
+  function renderSaved() {
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+    const el = document.getElementById('savedList');
+    if (!list.length) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
+    el.innerHTML = list.map(i => `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
+        <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
+        <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
+        <div onclick="deleteSaved(${i.id})" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
+      </div>`).join('');
+  }
+  renderSaved();
   // 엔터키 지원
   ['placeA', 'placeB'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => {
