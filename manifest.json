@@ -1,0 +1,21 @@
+{
+  "name": "위치짝",
+  "short_name": "위치짝",
+  "start_url": "/duomap/",
+  "display": "standalone",
+  "background_color": "#2C3E50",
+  "theme_color": "#FF6B35",
+  "description": "두 장소의 위치와 거리를 한눈에 확인하세요",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
