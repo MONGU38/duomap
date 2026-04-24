@@ -447,11 +447,11 @@
         addr: r.address_name
       }));
 
-      // A에서 가장 가까운 B 자동 선택 + 반경 20km 필터
+      // A에서 가장 가까운 B 자동 선택 + 반경 500km 필터
       allResultsB.forEach(b => { b._dist = haversine(posA.lat, posA.lng, b.lat, b.lng); });
-      allResultsB = allResultsB.filter(b => b._dist <= 20000);
+      allResultsB = allResultsB.filter(b => b._dist <= 500000);
       if (!allResultsB.length) {
-        showError(`"${qB}" 검색 결과가 A 위치 반경 20km 안에 없어요. 장소명을 더 구체적으로 입력해보세요.`);
+        showError(`"${qB}" 검색 결과가 A 위치 반경 500km 안에 없어요. 장소명을 더 구체적으로 입력해보세요.`);
         return;
       }
       allResultsB.sort((a, b) => a._dist - b._dist);
