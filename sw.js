@@ -1,3 +1,4 @@
+// updated
 const CACHE = 'duomap-' + new Date().toISOString();
 const urlsToCache = [
   '/duomap/',
