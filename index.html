@@ -4,6 +4,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>위치짝 - 두 장소의 위치와 거리 확인</title>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA5OLxcQWkLUeOWdZUkYtao3jG_x-fx-2U",
+    authDomain: "duomap-55d30.firebaseapp.com",
+    projectId: "duomap-55d30",
+    storageBucket: "duomap-55d30.firebasestorage.app",
+    messagingSenderId: "33299422731",
+    appId: "1:33299422731:web:18f07d3ea43fdca38bf10e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.fbDb = db;
+  window.fbCollection = collection;
+  window.fbAddDoc = addDoc;
+  window.fbGetDocs = getDocs;
+  window.fbDeleteDoc = deleteDoc;
+  window.fbDoc = doc;
+  window.fbQuery = query;
+  window.fbOrderBy = orderBy;
+
+  window.dispatchEvent(new Event('fbReady'));
+</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FF6B35">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -486,38 +513,65 @@
       document.getElementById('searchBtn').disabled = false;
     }
   }
-function saveResult() {
+async function saveResult() {
     if (!currentA || !currentB) return;
     const dist = haversine(currentA.lat, currentA.lng, currentB.lat, currentB.lng);
     const item = {
-      id: Date.now(),
       a: currentA.name,
       b: currentB.name,
-      dist: formatDist(dist)
+      dist: formatDist(dist),
+      createdAt: Date.now()
     };
-    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
-    list.unshift(item);
-    localStorage.setItem('위치짝', JSON.stringify(list));
+    if (window.fbDb) {
+      await window.fbAddDoc(window.fbCollection(window.fbDb, 'saves'), item);
+    } else {
+      const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+      item.id = Date.now();
+      list.unshift(item);
+      localStorage.setItem('위치짝', JSON.stringify(list));
+    }
     renderSaved();
   }
 
-  function deleteSaved(id) {
-    const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
-    localStorage.setItem('위치짝', JSON.stringify(list));
+  async function deleteSaved(id) {
+    if (window.fbDb) {
+      await window.fbDeleteDoc(window.fbDoc(window.fbDb, 'saves', id));
+    } else {
+      const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
+      localStorage.setItem('위치짝', JSON.stringify(list));
+    }
     renderSaved();
   }
 
-  function renderSaved() {
-    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+  async function renderSaved() {
     const el = document.getElementById('savedList');
-    if (!list.length) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
-    el.innerHTML = list.map(i => `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
-        <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
-        <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
-        <div onclick="deleteSaved(${i.id})" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
-      </div>`).join('');
+    if (window.fbDb) {
+      try {
+        const q = window.fbQuery(window.fbCollection(window.fbDb, 'saves'), window.fbOrderBy('createdAt', 'desc'));
+        const snap = await window.fbGetDocs(q);
+        if (snap.empty) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
+        el.innerHTML = snap.docs.map(d => {
+          const i = d.data();
+          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
+            <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
+            <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
+            <div onclick="deleteSaved('${d.id}')" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
+          </div>`;
+        }).join('');
+      } catch(e) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">불러오는 중...</div>'; }
+    } else {
+      const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+      if (!list.length) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
+      el.innerHTML = list.map(i => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
+          <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
+          <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
+          <div onclick="deleteSaved(${i.id})" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
+        </div>`).join('');
+    }
   }
+
+  window.addEventListener('fbReady', () => renderSaved());
   renderSaved();
   // 엔터키 지원
   ['placeA', 'placeB'].forEach(id => {
