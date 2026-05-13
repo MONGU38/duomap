@@ -648,7 +648,7 @@
 
   function openDirection(fromLat, fromLng, toLat, toLng) {
     const url = `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=transit`;
-    window.open(url, '_blank');
+    location.href = url;
   }
   // 엔터키
   ['placeA', 'placeB'].forEach(id => {
