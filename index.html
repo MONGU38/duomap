@@ -7,7 +7,6 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
-
   const firebaseConfig = {
     apiKey: "AIzaSyA5OLxcQWkLUeOWdZUkYtao3jG_x-fx-2U",
     authDomain: "duomap-55d30.firebaseapp.com",
@@ -16,10 +15,8 @@
     messagingSenderId: "33299422731",
     appId: "1:33299422731:web:18f07d3ea43fdca38bf10e"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-
   window.fbDb = db;
   window.fbCollection = collection;
   window.fbAddDoc = addDoc;
@@ -28,7 +25,6 @@
   window.fbDoc = doc;
   window.fbQuery = query;
   window.fbOrderBy = orderBy;
-
   window.dispatchEvent(new Event('fbReady'));
 </script>
 <link rel="manifest" href="manifest.json">
@@ -48,185 +44,119 @@
     --muted: #8A8A9A;
     --marker-a: #FF4444;
     --marker-b: #2266FF;
+    --hotel: #E74C3C;
+    --food: #27AE60;
     --shadow: 0 4px 24px rgba(0,0,0,0.10);
-    --radius: 16px;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nanum Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
-  body {
-    font-family: 'Nanum Gothic', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* 헤더 */
   header {
-    background: var(--secondary);
-    color: white;
-    padding: 14px 20px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: relative;
+    background: var(--secondary); color: white;
+    padding: 14px 20px 12px; display: flex; align-items: center; gap: 10px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   }
-  header .logo {
-    font-family: 'Black Han Sans', sans-serif;
-    font-size: 22px;
-    letter-spacing: -0.5px;
-  }
+  header .logo { font-family: 'Black Han Sans', sans-serif; font-size: 22px; letter-spacing: -0.5px; }
   header .logo span { color: var(--primary); }
-  header .subtitle {
-    font-size: 11px;
-    color: rgba(255,255,255,0.55);
-    margin-top: 1px;
-  }
-  header .pin-icon {
-    font-size: 26px;
-    line-height: 1;
-  }
+  header .subtitle { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 1px; }
+  header .pin-icon { font-size: 26px; line-height: 1; }
 
-  /* 입력 영역 */
-  .input-section {
-    background: var(--card);
-    padding: 16px 16px 12px;
-    box-shadow: var(--shadow);
+  /* 탭 */
+  .tab-bar {
+    display: flex; background: white;
     border-bottom: 3px solid var(--primary);
+    box-shadow: var(--shadow);
   }
+  .tab-btn {
+    flex: 1; padding: 12px 8px; border: none; background: none;
+    font-family: 'Nanum Gothic', sans-serif; font-size: 13px; font-weight: 800;
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+    border-bottom: 3px solid transparent; margin-bottom: -3px;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-  .input-row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    margin-bottom: 10px;
-  }
+  /* 패널 */
+  .panel { display: none; }
+  .panel.active { display: block; }
 
-  .input-group {
-    flex: 1;
-    position: relative;
-  }
-
-  .input-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+  /* 입력 섹션 */
+  .input-section { background: var(--card); padding: 16px 16px 12px; }
+  .input-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+  .input-group { flex: 1; position: relative; }
+  .input-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
   .dot-a { color: var(--marker-a); }
   .dot-b { color: var(--marker-b); }
-
+  .dot-loc { color: var(--primary); }
   .input-group input {
-    width: 100%;
-    border: 2px solid #E0E0EA;
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-family: 'Nanum Gothic', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-    background: #FAFAFA;
+    width: 100%; border: 2px solid #E0E0EA; border-radius: 10px;
+    padding: 10px 12px; font-size: 14px; font-family: 'Nanum Gothic', sans-serif;
+    outline: none; transition: border-color 0.2s; background: #FAFAFA;
   }
-  .input-group input:focus {
-    border-color: var(--primary);
-    background: #fff;
-  }
-  .input-group input.error { border-color: #FF4444; }
-
-  .arrow-divider {
-    font-size: 20px;
-    color: var(--muted);
-    margin-top: 22px;
-    flex-shrink: 0;
-  }
-
+  .input-group input:focus { border-color: var(--primary); background: #fff; }
+  .arrow-divider { font-size: 20px; color: var(--muted); margin-top: 22px; flex-shrink: 0; }
   .btn-search {
-    width: 100%;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 15px;
-    font-weight: 800;
-    font-family: 'Nanum Gothic', sans-serif;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    width: 100%; background: var(--primary); color: white; border: none;
+    border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 800;
+    font-family: 'Nanum Gothic', sans-serif; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
     transition: background 0.2s, transform 0.1s;
-    letter-spacing: -0.3px;
   }
   .btn-search:active { background: var(--primary-dark); transform: scale(0.98); }
   .btn-search:disabled { background: #ccc; cursor: not-allowed; }
 
+  /* 반경 선택 */
+  .radius-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .radius-btn {
+    flex: 1; padding: 8px 4px; border: 2px solid #E0E0EA; border-radius: 8px;
+    background: white; font-family: 'Nanum Gothic', sans-serif; font-size: 12px;
+    font-weight: 800; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .radius-btn.active { border-color: var(--primary); color: var(--primary); background: #FFF5F0; }
+
+  /* 카테고리 선택 */
+  .cat-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .cat-btn {
+    flex: 1; padding: 8px 4px; border: 2px solid #E0E0EA; border-radius: 8px;
+    background: white; font-family: 'Nanum Gothic', sans-serif; font-size: 12px;
+    font-weight: 800; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .cat-btn.active-hotel { border-color: var(--hotel); color: var(--hotel); background: #FFF0EE; }
+  .cat-btn.active-food { border-color: var(--food); color: var(--food); background: #EFFFF4; }
+  .cat-btn.active-all { border-color: var(--secondary); color: var(--secondary); background: #EEF2F5; }
+
   /* 결과 배너 */
   .result-banner {
-    display: none;
-    background: var(--secondary);
-    color: white;
-    padding: 10px 16px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-wrap: wrap;
+    display: none; background: var(--secondary); color: white;
+    padding: 10px 16px; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
   }
   .result-banner.show { display: flex; }
-  .result-banner .places-summary {
-    font-size: 12px;
-    color: rgba(255,255,255,0.75);
-    flex: 1;
-    min-width: 0;
-  }
+  .result-banner .places-summary { font-size: 12px; color: rgba(255,255,255,0.75); flex: 1; min-width: 0; }
   .result-banner .places-summary b { color: white; }
   .result-banner .distance-badge {
-    background: var(--accent);
-    color: var(--text);
-    font-family: 'Black Han Sans', sans-serif;
-    font-size: 17px;
-    padding: 5px 14px;
-    border-radius: 20px;
-    white-space: nowrap;
-    flex-shrink: 0;
+    background: var(--accent); color: var(--text);
+    font-family: 'Black Han Sans', sans-serif; font-size: 17px;
+    padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
   }
 
+  /* 주변탐색 결과 배너 */
+  .explore-banner {
+    display: none; background: var(--secondary); color: white;
+    padding: 10px 16px; align-items: center; justify-content: space-between;
+  }
+  .explore-banner.show { display: flex; }
+  .explore-count { font-family: 'Black Han Sans', sans-serif; font-size: 15px; }
+  .explore-count span { color: var(--accent); }
+
   /* 대안 선택 */
-  .alt-section {
-    display: none;
-    background: #FFF8F5;
-    border-top: 1px solid #FFE0D0;
-    padding: 10px 16px;
-  }
+  .alt-section { display: none; background: #FFF8F5; border-top: 1px solid #FFE0D0; padding: 10px 16px; }
   .alt-section.show { display: block; }
-  .alt-title {
-    font-size: 11px;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-weight: 700;
-  }
-  .alt-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
+  .alt-title { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+  .alt-list { display: flex; flex-direction: column; gap: 5px; }
   .alt-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: white;
-    border: 1.5px solid #E0E0EA;
-    border-radius: 8px;
-    padding: 7px 10px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-    font-size: 12px;
+    display: flex; align-items: center; gap: 8px; background: white;
+    border: 1.5px solid #E0E0EA; border-radius: 8px; padding: 7px 10px;
+    cursor: pointer; transition: border-color 0.15s; font-size: 12px;
   }
   .alt-item:hover { border-color: var(--primary); }
   .alt-item.selected { border-color: var(--marker-b); background: #EFF4FF; }
@@ -234,67 +164,65 @@
   .alt-item .alt-addr { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
   .alt-item .alt-dist { color: var(--marker-b); font-weight: 800; font-size: 11px; white-space: nowrap; }
 
-  /* 지도 */
-  #map {
-    flex: 1;
-    min-height: 340px;
+  /* 저장 목록 */
+  .save-section { background: white; padding: 10px 16px; border-bottom: 1px solid #eee; }
+  .save-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .save-title { font-size: 12px; font-weight: 800; color: #2C3E50; }
+  .btn-save {
+    background: var(--primary); color: white; border: none; border-radius: 8px;
+    padding: 5px 12px; font-size: 12px; font-weight: 800; cursor: pointer;
+    font-family: 'Nanum Gothic', sans-serif;
   }
 
-  /* 로딩 오버레이 */
+  /* 주변시설 목록 */
+  .nearby-list { background: white; max-height: 180px; overflow-y: auto; border-bottom: 1px solid #eee; }
+  .nearby-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+    border-bottom: 1px solid #f5f5f5; font-size: 12px;
+  }
+  .nearby-badge {
+    font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-hotel { background: #FDECEA; color: var(--hotel); }
+  .badge-food { background: #E8F8EE; color: var(--food); }
+  .nearby-name { flex: 1; font-weight: 700; }
+  .nearby-dist { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  /* 지도 */
+  #map1, #map2 { flex: 1; min-height: 320px; }
+
+  /* 로딩 */
   .loading-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+    z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
   }
   .loading-overlay.show { display: flex; }
   .loading-spinner {
-    width: 44px; height: 44px;
-    border: 4px solid rgba(255,255,255,0.3);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 44px; height: 44px; border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   .loading-text { color: white; font-weight: 700; font-size: 14px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* 에러 메시지 */
+  /* 에러 */
   .error-msg {
-    display: none;
-    background: #FFF0F0;
-    border-left: 4px solid #FF4444;
-    color: #CC0000;
-    font-size: 12px;
-    padding: 8px 12px;
-    margin-top: 8px;
-    border-radius: 0 8px 8px 0;
+    display: none; background: #FFF0F0; border-left: 4px solid #FF4444;
+    color: #CC0000; font-size: 12px; padding: 8px 12px; margin-top: 8px; border-radius: 0 8px 8px 0;
   }
   .error-msg.show { display: block; }
 
-  /* 초기 지도 안내 */
+  /* 지도 플레이스홀더 */
   .map-placeholder {
-    flex: 1;
-    min-height: 340px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--muted);
-    background: #F0EDE8;
+    flex: 1; min-height: 320px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    color: var(--muted); background: #F0EDE8;
   }
   .map-placeholder .big-icon { font-size: 52px; }
   .map-placeholder p { font-size: 13px; font-weight: 700; }
 
-  /* 반응형 */
   @media (min-width: 600px) {
-    .input-row { gap: 12px; }
-    #map, .map-placeholder { min-height: 450px; }
+    #map1, #map2, .map-placeholder { min-height: 400px; }
   }
 </style>
 </head>
@@ -304,69 +232,150 @@
   <div class="pin-icon">📍</div>
   <div>
     <div class="logo">위치<span>짝</span></div>
-    <div class="subtitle">두 장소의 위치와 거리를 한눈에 확인해보세요</div>
+    <div class="subtitle">두 장소의 위치와 거리를 한눈에</div>
   </div>
 </header>
 
-<div class="input-section">
-  <div class="input-row">
-    <div class="input-group">
-      <div class="input-label dot-a">● 출발지 / 장소 A</div>
-      <input type="text" id="placeA" placeholder="예: 부산역" autocomplete="off">
-    </div>
-    <div class="arrow-divider">↔</div>
-    <div class="input-group">
-      <div class="input-label dot-b">● 목적지 / 장소 B</div>
-      <input type="text" id="placeB" placeholder="예: 롯데호텔 부산" autocomplete="off">
-    </div>
-  </div>
-  <div class="error-msg" id="errorMsg"></div>
-  <button class="btn-search" id="searchBtn" onclick="doSearch()">
-    🔍 두 곳의 위치와 거리 확인하기
-  </button>
+<!-- 탭 바 -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('dist')">📏 거리 확인</button>
+  <button class="tab-btn" onclick="switchTab('explore')">🔍 주변 탐색</button>
 </div>
 
-<div class="result-banner" id="resultBanner">
-  <div class="places-summary" id="placesSummary"></div>
-  <div class="distance-badge" id="distanceBadge"></div>
+<!-- ===== 거리 확인 패널 ===== -->
+<div class="panel active" id="panel-dist">
+  <div class="input-section">
+    <div class="input-row">
+      <div class="input-group">
+        <div class="input-label dot-a">● 출발지 / 장소 A</div>
+        <input type="text" id="placeA" placeholder="예: 부산역" autocomplete="off">
+      </div>
+      <div class="arrow-divider">↔</div>
+      <div class="input-group">
+        <div class="input-label dot-b">● 목적지 / 장소 B</div>
+        <input type="text" id="placeB" placeholder="예: 롯데호텔 부산" autocomplete="off">
+      </div>
+    </div>
+    <div class="error-msg" id="errorMsg1"></div>
+    <button class="btn-search" id="searchBtn1" onclick="doSearch()">🔍 두 곳의 위치와 거리 확인하기</button>
+  </div>
+
+  <div class="result-banner" id="resultBanner">
+    <div class="places-summary" id="placesSummary"></div>
+    <div class="distance-badge" id="distanceBadge"></div>
+  </div>
+
+  <div class="alt-section" id="altSection">
+    <div class="alt-title">🔄 다른 <span id="altPlaceName"></span> 선택하기</div>
+    <div class="alt-list" id="altList"></div>
+  </div>
+
+  <div class="save-section">
+    <div class="save-header">
+      <div class="save-title">📌 저장 목록</div>
+      <button class="btn-save" onclick="saveResult()">이 결과 저장</button>
+    </div>
+    <div id="savedList"><div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div></div>
+  </div>
+
+  <div class="map-placeholder" id="mapPlaceholder1">
+    <div class="big-icon">🗺️</div>
+    <p>장소를 입력하고 거리를 확인하세요</p>
+  </div>
+  <div id="map1" style="display:none;"></div>
 </div>
 
-<div class="alt-section" id="altSection">
-  <div class="alt-title">🔄 다른 <span id="altPlaceName"></span> 선택하기</div>
-  <div class="alt-list" id="altList"></div>
-</div>
-<div style="background:white;padding:10px 16px;border-bottom:1px solid #eee;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-    <div style="font-size:12px;font-weight:800;color:#2C3E50">📌 저장 목록</div>
-    <button onclick="saveResult()" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nanum Gothic',sans-serif;">이 결과 저장</button>
+<!-- ===== 주변 탐색 패널 ===== -->
+<div class="panel" id="panel-explore">
+  <div class="input-section">
+    <div class="input-group" style="margin-bottom:10px;">
+      <div class="input-label dot-loc">📍 기준 장소</div>
+      <input type="text" id="placeLoc" placeholder="예: 부산역, 경복궁, 강남역" autocomplete="off">
+    </div>
+
+    <div style="font-size:10px;font-weight:800;color:var(--muted);margin-bottom:6px;letter-spacing:0.5px;">반경 선택</div>
+    <div class="radius-row">
+      <button class="radius-btn active" data-r="200" onclick="selectRadius(this)">200m</button>
+      <button class="radius-btn" data-r="300" onclick="selectRadius(this)">300m</button>
+      <button class="radius-btn" data-r="400" onclick="selectRadius(this)">400m</button>
+      <button class="radius-btn" data-r="500" onclick="selectRadius(this)">500m</button>
+    </div>
+
+    <div style="font-size:10px;font-weight:800;color:var(--muted);margin-bottom:6px;letter-spacing:0.5px;">카테고리 선택</div>
+    <div class="cat-row">
+      <button class="cat-btn active-hotel" data-cat="AD5" onclick="selectCat(this)">🏨 숙박</button>
+      <button class="cat-btn" data-cat="FD6" onclick="selectCat(this)">🍽️ 맛집</button>
+      <button class="cat-btn" data-cat="ALL" onclick="selectCat(this)">🔍 전체</button>
+    </div>
+
+    <div class="error-msg" id="errorMsg2"></div>
+    <button class="btn-search" id="searchBtn2" onclick="doExplore()">🔍 주변 시설 찾기</button>
   </div>
-  <div id="savedList"><div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div></div>
+
+  <div class="explore-banner" id="exploreBanner">
+    <div>검색 결과</div>
+    <div class="explore-count"><span id="exploreCount">0</span>개 발견</div>
+  </div>
+
+  <div class="nearby-list" id="nearbyList"></div>
+
+  <div class="map-placeholder" id="mapPlaceholder2">
+    <div class="big-icon">🔍</div>
+    <p>기준 장소와 반경을 선택하세요</p>
+  </div>
+  <div id="map2" style="display:none;"></div>
 </div>
-<div class="map-placeholder" id="mapPlaceholder">
-  <div class="big-icon">🗺️</div>
-  <p>장소를 입력하고 위치와 거리를 바로 확인할 수 있어요</p>
-</div>
-<div id="map" style="display:none;"></div>
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <div class="loading-text">위치 검색 중...</div>
 </div>
 
-
 <script>
-  let map = null;
-  let markerA = null, markerB = null;
-  let lineLayer = null;
-  let allResultsB = [];
-  let currentA = null, currentB = null;
+  // ===== 공통 변수 =====
+  let map1 = null, map2 = null;
+  let markerA = null, markerB = null, lineLayer = null;
+  let allResultsB = [], currentA = null, currentB = null;
+  let selectedRadius = 200;
+  let selectedCat = 'AD5';
+  let exploreMarkers = [], exploreCircle = null, exploreCenterMarker = null;
 
-  function showLoading(v) {
-    document.getElementById('loadingOverlay').classList.toggle('show', v);
+  // ===== 탭 전환 =====
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    if (tab === 'dist') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('panel-dist').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('panel-explore').classList.add('active');
+    }
   }
 
-  function showError(msg) {
-    const el = document.getElementById('errorMsg');
+  // ===== 반경/카테고리 선택 =====
+  function selectRadius(btn) {
+    document.querySelectorAll('.radius-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedRadius = parseInt(btn.dataset.r);
+  }
+
+  function selectCat(btn) {
+    document.querySelectorAll('.cat-btn').forEach(b => {
+      b.classList.remove('active-hotel', 'active-food', 'active-all');
+    });
+    const cat = btn.dataset.cat;
+    if (cat === 'AD5') btn.classList.add('active-hotel');
+    else if (cat === 'FD6') btn.classList.add('active-food');
+    else btn.classList.add('active-all');
+    selectedCat = cat;
+  }
+
+  // ===== 공통 =====
+  function showLoading(v) { document.getElementById('loadingOverlay').classList.toggle('show', v); }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
     el.textContent = msg;
     el.classList.toggle('show', !!msg);
   }
@@ -379,11 +388,27 @@
     return data.documents || [];
   }
 
+  async function searchNearby(lat, lng, radius, cat) {
+    const key = '5a52f309367cebda2580e38890569355';
+    if (cat === 'ALL') {
+      const [r1, r2] = await Promise.all([
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
+      ]);
+      return [
+        ...(r1.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
+        ...(r2.documents || []).map(d => ({ ...d, _cat: 'food' }))
+      ];
+    } else {
+      const res = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } });
+      const data = await res.json();
+      return (data.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }));
+    }
+  }
+
   function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371000;
-    const r = Math.PI / 180;
-    const dLat = (lat2 - lat1) * r;
-    const dLng = (lng2 - lng1) * r;
+    const R = 6371000, r = Math.PI / 180;
+    const dLat = (lat2 - lat1) * r, dLng = (lng2 - lng1) * r;
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLng/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
@@ -393,101 +418,69 @@
     return (m / 1000).toFixed(1) + 'km';
   }
 
-  function initMap(lat, lng) {
-    document.getElementById('mapPlaceholder').style.display = 'none';
-    document.getElementById('map').style.display = 'block';
-    if (map) { map.remove(); map = null; }
-    map = L.map('map').setView([lat, lng], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+  // ===== 거리 확인 =====
+  function initMap1(lat, lng) {
+    document.getElementById('mapPlaceholder1').style.display = 'none';
+    document.getElementById('map1').style.display = 'block';
+    if (map1) { map1.remove(); map1 = null; }
+    map1 = L.map('map1').setView([lat, lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map1);
   }
 
-  function drawMap(posA, posB) {
-    initMap((posA.lat + posB.lat) / 2, (posA.lng + posB.lng) / 2);
-    if (markerA) map.removeLayer(markerA);
-    if (markerB) map.removeLayer(markerB);
-    if (lineLayer) map.removeLayer(lineLayer);
-
-    const makeIcon = (color, label) => L.divIcon({
+  function makeIcon(color, label) {
+    return L.divIcon({
       className: '',
       html: `<div style="background:${color};color:white;font-size:11px;font-weight:800;border:2.5px solid white;border-radius:50% 50% 50% 0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.3);"><span style="transform:rotate(45deg)">${label}</span></div>`,
       iconSize: [32, 32], iconAnchor: [16, 32]
     });
+  }
 
-    markerA = L.marker([posA.lat, posA.lng], { icon: makeIcon('#FF4444', 'A') })
-      .bindPopup(`<b style="color:#FF4444">A</b> ${posA.name}`).addTo(map);
-    markerB = L.marker([posB.lat, posB.lng], { icon: makeIcon('#2266FF', 'B') })
-      .bindPopup(`<b style="color:#2266FF">B</b> ${posB.name}`).addTo(map);
-
-    lineLayer = L.polyline([[posA.lat, posA.lng], [posB.lat, posB.lng]], {
-      color: '#FF6B35', weight: 2.5, dashArray: '6,5', opacity: 0.8
-    }).addTo(map);
-
-    const bounds = L.latLngBounds([[posA.lat, posA.lng], [posB.lat, posB.lng]]);
-    map.fitBounds(bounds, { padding: [55, 55] });
+  function drawMap1(posA, posB) {
+    initMap1((posA.lat + posB.lat) / 2, (posA.lng + posB.lng) / 2);
+    if (markerA) map1.removeLayer(markerA);
+    if (markerB) map1.removeLayer(markerB);
+    if (lineLayer) map1.removeLayer(lineLayer);
+    markerA = L.marker([posA.lat, posA.lng], { icon: makeIcon('#FF4444', 'A') }).bindPopup(`<b style="color:#FF4444">A</b> ${posA.name}`).addTo(map1);
+    markerB = L.marker([posB.lat, posB.lng], { icon: makeIcon('#2266FF', 'B') }).bindPopup(`<b style="color:#2266FF">B</b> ${posB.name}`).addTo(map1);
+    lineLayer = L.polyline([[posA.lat, posA.lng], [posB.lat, posB.lng]], { color: '#FF6B35', weight: 2.5, dashArray: '6,5', opacity: 0.8 }).addTo(map1);
+    map1.fitBounds(L.latLngBounds([[posA.lat, posA.lng], [posB.lat, posB.lng]]), { padding: [55, 55] });
   }
 
   function showResult(posA, posB) {
     const dist = haversine(posA.lat, posA.lng, posB.lat, posB.lng);
-    const banner = document.getElementById('resultBanner');
-    document.getElementById('placesSummary').innerHTML =
-      `<b style="color:#FF9999">A</b> ${posA.name} &nbsp;↔&nbsp; <b style="color:#99BBFF">B</b> ${posB.name}`;
+    document.getElementById('placesSummary').innerHTML = `<b style="color:#FF9999">A</b> ${posA.name} &nbsp;↔&nbsp; <b style="color:#99BBFF">B</b> ${posB.name}`;
     document.getElementById('distanceBadge').textContent = '직선 ' + formatDist(dist);
-    banner.classList.add('show');
-    drawMap(posA, posB);
+    document.getElementById('resultBanner').classList.add('show');
+    drawMap1(posA, posB);
   }
 
   function selectAlt(idx) {
     const posB = allResultsB[idx];
     currentB = posB;
-    document.querySelectorAll('.alt-item').forEach((el, i) => {
-      el.classList.toggle('selected', i === idx);
-    });
+    document.querySelectorAll('.alt-item').forEach((el, i) => el.classList.toggle('selected', i === idx));
     showResult(currentA, posB);
   }
 
   async function doSearch() {
-    showError('');
+    showError('errorMsg1', '');
     const qA = document.getElementById('placeA').value.trim();
     const qB = document.getElementById('placeB').value.trim();
-    if (!qA || !qB) {
-      showError('두 장소를 모두 입력해주세요.');
-      return;
-    }
-
+    if (!qA || !qB) { showError('errorMsg1', '두 장소를 모두 입력해주세요.'); return; }
     showLoading(true);
-    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn1').disabled = true;
     document.getElementById('altSection').classList.remove('show');
-
     try {
       const [resA, resB] = await Promise.all([geocode(qA), geocode(qB)]);
-
-      if (!resA.length) { showError(`"${qA}" 을(를) 찾을 수 없어요. 더 자세히 입력해보세요.`); return; }
-      if (!resB.length) { showError(`"${qB}" 을(를) 찾을 수 없어요. 더 자세히 입력해보세요.`); return; }
-
+      if (!resA.length) { showError('errorMsg1', `"${qA}" 을(를) 찾을 수 없어요.`); return; }
+      if (!resB.length) { showError('errorMsg1', `"${qB}" 을(를) 찾을 수 없어요.`); return; }
       const posA = { lat: parseFloat(resA[0].y), lng: parseFloat(resA[0].x), name: resA[0].place_name };
-
-      allResultsB = resB.map(r => ({
-        lat: parseFloat(r.y), lng: parseFloat(r.x),
-        name: r.place_name,
-        addr: r.address_name
-      }));
-
-      // A에서 가장 가까운 B 자동 선택 + 반경 500km 필터
+      allResultsB = resB.map(r => ({ lat: parseFloat(r.y), lng: parseFloat(r.x), name: r.place_name, addr: r.address_name }));
       allResultsB.forEach(b => { b._dist = haversine(posA.lat, posA.lng, b.lat, b.lng); });
       allResultsB = allResultsB.filter(b => b._dist <= 500000);
-      if (!allResultsB.length) {
-        showError(`"${qB}" 검색 결과가 A 위치 반경 500km 안에 없어요. 장소명을 더 구체적으로 입력해보세요.`);
-        return;
-      }
+      if (!allResultsB.length) { showError('errorMsg1', `"${qB}" 검색 결과가 반경 500km 안에 없어요.`); return; }
       allResultsB.sort((a, b) => a._dist - b._dist);
-
-      currentA = posA;
-      currentB = allResultsB[0];
+      currentA = posA; currentB = allResultsB[0];
       showResult(posA, allResultsB[0]);
-
-      // 대안이 2개 이상이면 선택 목록 표시
       if (allResultsB.length > 1) {
         document.getElementById('altPlaceName').textContent = qB;
         const list = document.getElementById('altList');
@@ -495,39 +488,103 @@
         allResultsB.forEach((b, i) => {
           const el = document.createElement('div');
           el.className = 'alt-item' + (i === 0 ? ' selected' : '');
-          el.innerHTML = `
-            <span class="alt-name">${b.name}</span>
-            <span class="alt-addr">${b.addr}</span>
-            <span class="alt-dist">${formatDist(b._dist)}</span>
-          `;
+          el.innerHTML = `<span class="alt-name">${b.name}</span><span class="alt-addr">${b.addr}</span><span class="alt-dist">${formatDist(b._dist)}</span>`;
           el.onclick = () => selectAlt(i);
           list.appendChild(el);
         });
         document.getElementById('altSection').classList.add('show');
       }
-
-    } catch(e) {
-      showError('검색 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
-    } finally {
-      showLoading(false);
-      document.getElementById('searchBtn').disabled = false;
-    }
+    } catch(e) { showError('errorMsg1', '검색 중 오류가 발생했어요.'); }
+    finally { showLoading(false); document.getElementById('searchBtn1').disabled = false; }
   }
-async function saveResult() {
+
+  // ===== 주변 탐색 =====
+  function initMap2(lat, lng) {
+    document.getElementById('mapPlaceholder2').style.display = 'none';
+    document.getElementById('map2').style.display = 'block';
+    if (map2) { map2.remove(); map2 = null; }
+    map2 = L.map('map2').setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map2);
+  }
+
+  function makeSmallIcon(cat) {
+    const color = cat === 'hotel' ? '#E74C3C' : '#27AE60';
+    const label = cat === 'hotel' ? '🏨' : '🍽️';
+    return L.divIcon({
+      className: '',
+      html: `<div style="background:${color};color:white;font-size:13px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${label}</div>`,
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    });
+  }
+
+  async function doExplore() {
+    showError('errorMsg2', '');
+    const qLoc = document.getElementById('placeLoc').value.trim();
+    if (!qLoc) { showError('errorMsg2', '기준 장소를 입력해주세요.'); return; }
+    showLoading(true);
+    document.getElementById('searchBtn2').disabled = true;
+    try {
+      const resLoc = await geocode(qLoc);
+      if (!resLoc.length) { showError('errorMsg2', `"${qLoc}" 을(를) 찾을 수 없어요.`); return; }
+      const loc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x), name: resLoc[0].place_name };
+      const nearby = await searchNearby(loc.lat, loc.lng, selectedRadius, selectedCat);
+      initMap2(loc.lat, loc.lng);
+
+      // 기존 마커 제거
+      exploreMarkers.forEach(m => map2.removeLayer(m));
+      exploreMarkers = [];
+      if (exploreCircle) map2.removeLayer(exploreCircle);
+      if (exploreCenterMarker) map2.removeLayer(exploreCenterMarker);
+
+      // 중심 마커
+      exploreCenterMarker = L.marker([loc.lat, loc.lng], { icon: makeIcon('#FF4444', '📍') }).bindPopup(`<b>${loc.name}</b>`).addTo(map2);
+
+      // 반경 원
+      exploreCircle = L.circle([loc.lat, loc.lng], {
+        radius: selectedRadius, color: '#FF6B35', fillColor: '#FF6B35',
+        fillOpacity: 0.08, weight: 2, dashArray: '6,4'
+      }).addTo(map2);
+
+      // 시설 마커
+      nearby.forEach(place => {
+        const m = L.marker([parseFloat(place.y), parseFloat(place.x)], { icon: makeSmallIcon(place._cat) })
+          .bindPopup(`<b>${place.place_name}</b><br><small>${place.road_address_name || place.address_name}</small><br><small>${place.distance}m</small>`)
+          .addTo(map2);
+        exploreMarkers.push(m);
+      });
+
+      // 목록
+      const listEl = document.getElementById('nearbyList');
+      if (!nearby.length) {
+        listEl.innerHTML = '<div style="padding:12px 16px;color:#aaa;font-size:12px;">반경 내 시설이 없어요. 반경을 늘려보세요.</div>';
+      } else {
+        listEl.innerHTML = nearby.sort((a,b) => parseInt(a.distance) - parseInt(b.distance)).map(p => `
+          <div class="nearby-item">
+            <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
+            <span class="nearby-name">${p.place_name}</span>
+            <span class="nearby-dist">${p.distance}m</span>
+          </div>`).join('');
+      }
+
+      document.getElementById('exploreCount').textContent = nearby.length;
+      document.getElementById('exploreBanner').classList.add('show');
+
+      map2.fitBounds(exploreCircle.getBounds(), { padding: [30, 30] });
+
+    } catch(e) { showError('errorMsg2', '검색 중 오류가 발생했어요.'); }
+    finally { showLoading(false); document.getElementById('searchBtn2').disabled = false; }
+  }
+
+  // ===== Firebase 저장 =====
+  async function saveResult() {
     if (!currentA || !currentB) return;
     const dist = haversine(currentA.lat, currentA.lng, currentB.lat, currentB.lng);
-    const item = {
-      a: currentA.name,
-      b: currentB.name,
-      dist: formatDist(dist),
-      createdAt: Date.now()
-    };
+    const item = { a: currentA.name, b: currentB.name, dist: formatDist(dist), createdAt: Date.now() };
     if (window.fbDb) {
       await window.fbAddDoc(window.fbCollection(window.fbDb, 'saves'), item);
     } else {
       const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
-      item.id = Date.now();
-      list.unshift(item);
+      item.id = Date.now(); list.unshift(item);
       localStorage.setItem('위치짝', JSON.stringify(list));
     }
     renderSaved();
@@ -573,12 +630,12 @@ async function saveResult() {
 
   window.addEventListener('fbReady', () => renderSaved());
   renderSaved();
-  // 엔터키 지원
+
+  // 엔터키
   ['placeA', 'placeB'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', e => {
-      if (e.key === 'Enter') doSearch();
-    });
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   });
+  document.getElementById('placeLoc').addEventListener('keydown', e => { if (e.key === 'Enter') doExplore(); });
 </script>
 <script>
 if ('serviceWorker' in navigator) {
