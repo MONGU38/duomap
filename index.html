@@ -175,7 +175,7 @@
   }
 
   /* 주변시설 목록 */
-  .nearby-list { background: white; max-height: 180px; overflow-y: auto; border-bottom: 1px solid #eee; }
+  .nearby-list { background: white; max-height: 400px; overflow-y: auto; border-bottom: 1px solid #eee; }
   .nearby-item {
     display: flex; align-items: center; gap: 8px; padding: 8px 16px;
     border-bottom: 1px solid #f5f5f5; font-size: 12px;
@@ -391,13 +391,13 @@
 
   async function searchNearby(lat, lng, radius, cat) {
     const key = '5a52f309367cebda2580e38890569355';
+    const fetchPage = (code, page) =>
+      fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=${page}`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json());
     if (cat === 'ALL') {
-      const [r1, r1p2, r2, r2p2] = await Promise.all([
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
-      ]);
+      const r1 = await fetchPage('AD5', 1);
+      const r1p2 = await fetchPage('AD5', 2);
+      const r2 = await fetchPage('FD6', 1);
+      const r2p2 = await fetchPage('FD6', 2);
       return [
         ...(r1.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
         ...(r1p2.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
@@ -405,10 +405,8 @@
         ...(r2p2.documents || []).map(d => ({ ...d, _cat: 'food' }))
       ];
     } else {
-      const [res1, res2] = await Promise.all([
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
-      ]);
+      const res1 = await fetchPage(cat, 1);
+      const res2 = await fetchPage(cat, 2);
       return [
         ...(res1.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' })),
         ...(res2.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }))
