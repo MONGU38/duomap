@@ -391,18 +391,27 @@
   async function searchNearby(lat, lng, radius, cat) {
     const key = '5a52f309367cebda2580e38890569355';
     if (cat === 'ALL') {
-      const [r1, r2] = await Promise.all([
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
-        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
+      const [r1, r1p2, r2, r2p2] = await Promise.all([
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AD5&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
       ]);
       return [
         ...(r1.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
-        ...(r2.documents || []).map(d => ({ ...d, _cat: 'food' }))
+        ...(r1p2.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
+        ...(r2.documents || []).map(d => ({ ...d, _cat: 'food' })),
+        ...(r2p2.documents || []).map(d => ({ ...d, _cat: 'food' }))
       ];
     } else {
-      const res = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15`, { headers: { Authorization: `KakaoAK ${key}` } });
-      const data = await res.json();
-      return (data.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }));
+      const [res1, res2] = await Promise.all([
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=1`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json()),
+        fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${cat}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=2`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json())
+      ]);
+      return [
+        ...(res1.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' })),
+        ...(res2.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }))
+      ];
     }
   }
 
@@ -559,10 +568,10 @@
         listEl.innerHTML = '<div style="padding:12px 16px;color:#aaa;font-size:12px;">반경 내 시설이 없어요. 반경을 늘려보세요.</div>';
       } else {
         listEl.innerHTML = nearby.sort((a,b) => parseInt(a.distance) - parseInt(b.distance)).map(p => `
-          <div class="nearby-item">
+          <div class="nearby-item" onclick="openDirection('${loc.lat}','${loc.lng}','${p.y}','${p.x}')" style="cursor:pointer;">
             <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
             <span class="nearby-name">${p.place_name}</span>
-            <span class="nearby-dist">${p.distance}m</span>
+            <span class="nearby-dist">${p.distance}m 🗺️</span>
           </div>`).join('');
       }
 
@@ -631,6 +640,10 @@
   window.addEventListener('fbReady', () => renderSaved());
   renderSaved();
 
+  function openDirection(fromLat, fromLng, toLat, toLng) {
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=transit`;
+    window.open(url, '_blank');
+  }
   // 엔터키
   ['placeA', 'placeB'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
