@@ -309,6 +309,7 @@
     </div>
 
     <div class="error-msg" id="errorMsg2"></div>
+    <div id="nearbyStationBanner" style="display:none;background:#EBF5FB;border-left:4px solid #2266FF;padding:8px 12px;margin-top:8px;border-radius:0 8px 8px 0;font-size:12px;font-weight:800;color:#2266FF;" id="nearbyStationBanner"><span id="nearbyStationName"></span></div>
     <button class="btn-search" id="searchBtn2" onclick="doExplore()">🔍 주변 시설 찾기</button>
   </div>
 
@@ -535,7 +536,14 @@
     try {
       const resLoc = await geocode(qLoc);
       if (!resLoc.length) { showError('errorMsg2', `"${qLoc}" 을(를) 찾을 수 없어요.`); return; }
-      const loc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x), name: resLoc[0].place_name };
+      const initLoc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x) };
+      const key = '5a52f309367cebda2580e38890569355';
+      const stationRes = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=SW8&x=${initLoc.lng}&y=${initLoc.lat}&radius=2000&size=1&sort=distance`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json());
+      if (!stationRes.documents || !stationRes.documents.length) { showError('errorMsg2', '주변 2km 내 지하철역을 찾을 수 없어요.'); return; }
+      const station = stationRes.documents[0];
+      const loc = { lat: parseFloat(station.y), lng: parseFloat(station.x), name: station.place_name };
+      document.getElementById('nearbyStationName').textContent = `📍 기준역: ${loc.name}`;
+      document.getElementById('nearbyStationBanner').style.display = 'block';
       const nearby = await searchNearby(loc.lat, loc.lng, selectedRadius, selectedCat);
       initMap2(loc.lat, loc.lng);
 
