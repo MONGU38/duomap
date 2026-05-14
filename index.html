@@ -645,9 +645,19 @@
 
   window.addEventListener('fbReady', () => renderSaved());
   renderSaved();
+  const _restoreTab = sessionStorage.getItem('restoreTab');
+  const _restoreLoc = sessionStorage.getItem('restoreLoc');
+  if (_restoreTab === 'explore' && _restoreLoc) {
+    sessionStorage.removeItem('restoreTab');
+    sessionStorage.removeItem('restoreLoc');
+    switchTab('explore');
+    document.getElementById('placeLoc').value = _restoreLoc;
+  }
 
-  function openDirection(fromLat, fromLng, toLat, toLng) {
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&travelmode=transit`;
+  function openDirection(lat, lng, name) {
+    sessionStorage.setItem('restoreLoc', document.getElementById('placeLoc').value);
+    sessionStorage.setItem('restoreTab', 'explore');
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&center=${lat},${lng}`;
     location.href = url;
   }
   // 엔터키
