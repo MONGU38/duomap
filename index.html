@@ -574,7 +574,7 @@
         listEl.innerHTML = '<div style="padding:12px 16px;color:#aaa;font-size:12px;">반경 내 시설이 없어요. 반경을 늘려보세요.</div>';
       } else {
         listEl.innerHTML = nearby.sort((a,b) => parseInt(a.distance) - parseInt(b.distance)).map(p => `
-          <div class="nearby-item" onclick="openDirection('${loc.lat}','${loc.lng}','${p.y}','${p.x}')" style="cursor:pointer;">
+          <div class="nearby-item" onclick="openDirection('${p.y}','${p.x}','${p.place_name}')" style="cursor:pointer;">
             <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
             <span class="nearby-name">${p.place_name}</span>
             <span class="nearby-dist">${p.distance}m 🗺️</span>
