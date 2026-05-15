@@ -657,7 +657,7 @@
   function openDirection(lat, lng, name) {
     sessionStorage.setItem('restoreLoc', document.getElementById('placeLoc').value);
     sessionStorage.setItem('restoreTab', 'explore');
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&center=${lat},${lng}`;
+    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
     location.href = url;
   }
   // 엔터키
