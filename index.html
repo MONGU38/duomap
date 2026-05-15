@@ -534,14 +534,8 @@
     try {
       const resLoc = await geocode(qLoc);
       if (!resLoc.length) { showError('errorMsg2', `"${qLoc}" 을(를) 찾을 수 없어요.`); return; }
-      const initLoc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x) };
-      const key = '5a52f309367cebda2580e38890569355';
-      const stationRes = await fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=SW8&x=${initLoc.lng}&y=${initLoc.lat}&radius=2000&size=1&sort=distance`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json());
-      if (!stationRes.documents || !stationRes.documents.length) { showError('errorMsg2', '주변 2km 내 지하철역을 찾을 수 없어요.'); return; }
-      const station = stationRes.documents[0];
-      const loc = { lat: parseFloat(station.y), lng: parseFloat(station.x), name: station.place_name };
-      document.getElementById('nearbyStationName').textContent = `📍 기준역: ${loc.name}`;
-      document.getElementById('nearbyStationBanner').style.display = 'block';
+      const loc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x), name: resLoc[0].place_name };
+      document.getElementById('nearbyStationBanner').style.display = 'none';
       const nearby = await searchNearby(loc.lat, loc.lng, selectedRadius, selectedCat);
       initMap2(loc.lat, loc.lng);
 
@@ -624,10 +618,10 @@
         if (snap.empty) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
         el.innerHTML = snap.docs.map(d => {
           const i = d.data();
-          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
+          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;cursor:pointer;" onclick="reloadSaved('${i.a}','${i.b}')">
             <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
             <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
-            <div onclick="deleteSaved('${d.id}')" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
+            <div onclick="event.stopPropagation();deleteSaved('${d.id}')" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
           </div>`;
         }).join('');
       } catch(e) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">불러오는 중...</div>'; }
@@ -652,6 +646,12 @@
     sessionStorage.removeItem('restoreLoc');
     switchTab('explore');
     document.getElementById('placeLoc').value = _restoreLoc;
+  }
+
+  async function reloadSaved(a, b) {
+    document.getElementById('placeA').value = a;
+    document.getElementById('placeB').value = b;
+    await doSearch();
   }
 
   function openDirection(lat, lng, name) {
