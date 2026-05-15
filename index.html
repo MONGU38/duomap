@@ -557,7 +557,7 @@
       // 시설 마커
       nearby.forEach(place => {
         const m = L.marker([parseFloat(place.y), parseFloat(place.x)], { icon: makeSmallIcon(place._cat) })
-          .bindPopup(`<b>${place.place_name}</b><br><small>${place.road_address_name || place.address_name}</small><br><small>${place.distance}m</small>`)
+          .bindPopup(`<b>${place.place_name}</b><br><small>${place.road_address_name || place.address_name}</small><br><small>${place.distance}m</small><br><a href="https://place.map.kakao.com/${place.id}" target="_blank" style="color:#FF6B35;font-weight:800;">📍 상세보기</a>`)
           .addTo(map2);
         exploreMarkers.push(m);
       });
@@ -568,7 +568,7 @@
         listEl.innerHTML = '<div style="padding:12px 16px;color:#aaa;font-size:12px;">반경 내 시설이 없어요. 반경을 늘려보세요.</div>';
       } else {
         listEl.innerHTML = nearby.sort((a,b) => parseInt(a.distance) - parseInt(b.distance)).map(p => `
-          <div class="nearby-item" onclick="openDirection('${p.y}','${p.x}','${p.place_name}')" style="cursor:pointer;">
+          <div class="nearby-item" onclick="openDirection('${p.id}')" style="cursor:pointer;">
             <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
             <span class="nearby-name">${p.place_name}</span>
             <span class="nearby-dist">${p.distance}m 🗺️</span>
@@ -654,11 +654,10 @@
     await doSearch();
   }
 
-  function openDirection(lat, lng, name) {
+  function openDirection(id) {
     sessionStorage.setItem('restoreLoc', document.getElementById('placeLoc').value);
     sessionStorage.setItem('restoreTab', 'explore');
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&center=${lat},${lng}&zoom=17`;
-    location.href = url;
+    location.href = `https://place.map.kakao.com/${id}`;
   }
   // 엔터키
   ['placeA', 'placeB'].forEach(id => {
