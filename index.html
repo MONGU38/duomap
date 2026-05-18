@@ -38,7 +38,10 @@
           window.fbUserId = USER_ID;
           window.dispatchEvent(new Event('fbReady'));
         } else {
-          signInWithRedirect(auth, provider);
+          if (!sessionStorage.getItem('redirecting')) {
+            sessionStorage.setItem('redirecting', '1');
+            signInWithRedirect(auth, provider);
+          }
         }
       });
     });
