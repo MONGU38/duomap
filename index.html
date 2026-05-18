@@ -4,48 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>위치짝 - 두 장소의 위치와 거리 확인</title>
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
-  import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
-  const firebaseConfig = {
-    apiKey: "AIzaSyA5OLxcQWkLUeOWdZUkYtao3jG_x-fx-2U",
-    authDomain: "duomap-55d30.firebaseapp.com",
-    projectId: "duomap-55d30",
-    storageBucket: "duomap-55d30.firebasestorage.app",
-    messagingSenderId: "33299422731",
-    appId: "1:33299422731:web:18f07d3ea43fdca38bf10e"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ login_hint: 'fbi1588@gmail.com' });
-  let USER_ID = null;
-  window.fbDb = db;
-  window.fbCollection = collection;
-  window.fbAddDoc = addDoc;
-  window.fbGetDocs = getDocs;
-  window.fbDeleteDoc = deleteDoc;
-  window.fbDoc = doc;
-  window.fbQuery = query;
-  window.fbOrderBy = orderBy;
-  setPersistence(auth, browserLocalPersistence).then(() => {
-    getRedirectResult(auth).then(() => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          USER_ID = user.uid;
-          window.fbUserId = USER_ID;
-          window.dispatchEvent(new Event('fbReady'));
-        } else {
-          if (!sessionStorage.getItem('redirecting')) {
-            sessionStorage.setItem('redirecting', '1');
-            signInWithRedirect(auth, provider);
-          }
-        }
-      });
-    });
-  });
+<script>
+  window.dispatchEvent(new Event('fbReady'));
 </script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FF6B35">
@@ -614,53 +574,29 @@
   async function saveResult() {
     if (!currentA || !currentB) return;
     const dist = haversine(currentA.lat, currentA.lng, currentB.lat, currentB.lng);
-    const item = { a: currentA.name, b: currentB.name, dist: formatDist(dist), createdAt: Date.now() };
-    if (window.fbDb) {
-      await window.fbAddDoc(window.fbCollection(window.fbDb, 'users', window.fbUserId, 'saves'), item);
-    } else {
-      const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
-      item.id = Date.now(); list.unshift(item);
-      localStorage.setItem('위치짝', JSON.stringify(list));
-    }
+    const item = { a: currentA.name, b: currentB.name, dist: formatDist(dist), createdAt: Date.now(), id: Date.now() };
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+    list.unshift(item);
+    localStorage.setItem('위치짝', JSON.stringify(list));
     renderSaved();
   }
 
   async function deleteSaved(id) {
-    if (window.fbDb) {
-      await window.fbDeleteDoc(window.fbDoc(window.fbDb, 'users', window.fbUserId, 'saves', id));
-    } else {
-      const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
-      localStorage.setItem('위치짝', JSON.stringify(list));
-    }
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
+    localStorage.setItem('위치짝', JSON.stringify(list));
     renderSaved();
   }
 
   async function renderSaved() {
     const el = document.getElementById('savedList');
-    if (window.fbDb && window.fbUserId) {
-      try {
-        const q = window.fbQuery(window.fbCollection(window.fbDb, 'users', window.fbUserId, 'saves'), window.fbOrderBy('createdAt', 'desc'));
-        const snap = await window.fbGetDocs(q);
-        if (snap.empty) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
-        el.innerHTML = snap.docs.map(d => {
-          const i = d.data();
-          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;cursor:pointer;" onclick="reloadSaved('${i.a}','${i.b}')">
-            <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
-            <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
-            <div onclick="event.stopPropagation();deleteSaved('${d.id}')" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
-          </div>`;
-        }).join('');
-      } catch(e) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">불러오는 중...</div>'; }
-    } else {
-      const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
-      if (!list.length) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
-      el.innerHTML = list.map(i => `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;">
-          <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
-          <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
-          <div onclick="deleteSaved(${i.id})" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
-        </div>`).join('');
-    }
+    const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
+    if (!list.length) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
+    el.innerHTML = list.map(i => `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8;font-size:12px;cursor:pointer;" onclick="reloadSaved('${i.a}','${i.b}')">
+        <div style="flex:1"><b style="color:#FF4444">A</b> ${i.a} ↔ <b style="color:#2266FF">B</b> ${i.b}</div>
+        <div style="color:#FF6B35;font-weight:800;white-space:nowrap">${i.dist}</div>
+        <div onclick="event.stopPropagation();deleteSaved(${i.id})" style="cursor:pointer;color:#aaa;font-size:16px;padding:0 4px">✕</div>
+      </div>`).join('');
   }
 
   window.addEventListener('fbReady', () => renderSaved());
