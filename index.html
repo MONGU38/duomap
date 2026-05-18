@@ -7,7 +7,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
-  import { getAuth, signInWithRedirect, onAuthStateChanged, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+  import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
   const firebaseConfig = {
     apiKey: "AIzaSyA5OLxcQWkLUeOWdZUkYtao3jG_x-fx-2U",
     authDomain: "duomap-55d30.firebaseapp.com",
@@ -30,16 +30,18 @@
   window.fbDoc = doc;
   window.fbQuery = query;
   window.fbOrderBy = orderBy;
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      USER_ID = user.uid;
-      window.fbUserId = USER_ID;
-      window.dispatchEvent(new Event('fbReady'));
-    } else {
-      setPersistence(auth, browserLocalPersistence).then(() => {
-        signInWithRedirect(auth, provider);
+  setPersistence(auth, browserLocalPersistence).then(() => {
+    getRedirectResult(auth).then(() => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          USER_ID = user.uid;
+          window.fbUserId = USER_ID;
+          window.dispatchEvent(new Event('fbReady'));
+        } else {
+          signInWithRedirect(auth, provider);
+        }
       });
-    }
+    });
   });
 </script>
 <link rel="manifest" href="manifest.json">
