@@ -7,6 +7,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
+  import { getAuth, signInWithRedirect, onAuthStateChanged, GoogleAuthProvider, browserLocalPersistence, setPersistence } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
   const firebaseConfig = {
     apiKey: "AIzaSyA5OLxcQWkLUeOWdZUkYtao3jG_x-fx-2U",
     authDomain: "duomap-55d30.firebaseapp.com",
@@ -17,6 +18,10 @@
   };
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ login_hint: 'fbi1588@gmail.com' });
+  let USER_ID = null;
   window.fbDb = db;
   window.fbCollection = collection;
   window.fbAddDoc = addDoc;
@@ -25,7 +30,17 @@
   window.fbDoc = doc;
   window.fbQuery = query;
   window.fbOrderBy = orderBy;
-  window.dispatchEvent(new Event('fbReady'));
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      USER_ID = user.uid;
+      window.fbUserId = USER_ID;
+      window.dispatchEvent(new Event('fbReady'));
+    } else {
+      setPersistence(auth, browserLocalPersistence).then(() => {
+        signInWithRedirect(auth, provider);
+      });
+    }
+  });
 </script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FF6B35">
@@ -536,7 +551,13 @@
       if (!resLoc.length) { showError('errorMsg2', `"${qLoc}" 을(를) 찾을 수 없어요.`); return; }
       const loc = { lat: parseFloat(resLoc[0].y), lng: parseFloat(resLoc[0].x), name: resLoc[0].place_name };
       document.getElementById('nearbyStationBanner').style.display = 'none';
-      const nearby = await searchNearby(loc.lat, loc.lng, selectedRadius, selectedCat);
+      const allNearby = await searchNearby(loc.lat, loc.lng, selectedRadius, selectedCat);
+      const seen = new Set();
+      const nearby = allNearby.filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
       initMap2(loc.lat, loc.lng);
 
       // 기존 마커 제거
@@ -590,7 +611,7 @@
     const dist = haversine(currentA.lat, currentA.lng, currentB.lat, currentB.lng);
     const item = { a: currentA.name, b: currentB.name, dist: formatDist(dist), createdAt: Date.now() };
     if (window.fbDb) {
-      await window.fbAddDoc(window.fbCollection(window.fbDb, 'saves'), item);
+      await window.fbAddDoc(window.fbCollection(window.fbDb, 'users', window.fbUserId, 'saves'), item);
     } else {
       const list = JSON.parse(localStorage.getItem('위치짝') || '[]');
       item.id = Date.now(); list.unshift(item);
@@ -601,7 +622,7 @@
 
   async function deleteSaved(id) {
     if (window.fbDb) {
-      await window.fbDeleteDoc(window.fbDoc(window.fbDb, 'saves', id));
+      await window.fbDeleteDoc(window.fbDoc(window.fbDb, 'users', window.fbUserId, 'saves', id));
     } else {
       const list = JSON.parse(localStorage.getItem('위치짝') || '[]').filter(i => i.id !== id);
       localStorage.setItem('위치짝', JSON.stringify(list));
@@ -611,9 +632,9 @@
 
   async function renderSaved() {
     const el = document.getElementById('savedList');
-    if (window.fbDb) {
+    if (window.fbDb && window.fbUserId) {
       try {
-        const q = window.fbQuery(window.fbCollection(window.fbDb, 'saves'), window.fbOrderBy('createdAt', 'desc'));
+        const q = window.fbQuery(window.fbCollection(window.fbDb, 'users', window.fbUserId, 'saves'), window.fbOrderBy('createdAt', 'desc'));
         const snap = await window.fbGetDocs(q);
         if (snap.empty) { el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px 0">저장된 항목이 없어요</div>'; return; }
         el.innerHTML = snap.docs.map(d => {
