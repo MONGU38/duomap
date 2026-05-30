@@ -185,6 +185,19 @@
   .loading-text { color: white; font-weight: 700; font-size: 14px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* 자동완성 */
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+    background: white; border: 1.5px solid #E0E0EA; border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 180px; overflow-y: auto;
+  }
+  .autocomplete-item {
+    padding: 9px 12px; font-size: 13px; cursor: pointer; color: var(--text);
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover { background: #FFF5F0; color: var(--primary); }
+
   /* 에러 */
   .error-msg {
     display: none; background: #FFF0F0; border-left: 4px solid #FF4444;
@@ -313,6 +326,38 @@
 </div>
 
 <script>
+  // ===== 자동완성 =====
+  function saveHistory(key, value) {
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    const filtered = list.filter(v => v !== value);
+    filtered.unshift(value);
+    localStorage.setItem(key, JSON.stringify(filtered.slice(0, 10)));
+  }
+
+  function showAutocomplete(inputEl, key) {
+    const existing = inputEl.parentNode.querySelector('.autocomplete-list');
+    if (existing) existing.remove();
+    const val = inputEl.value.trim();
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    const filtered = val ? list.filter(v => v.includes(val)) : list;
+    if (!filtered.length) return;
+    const ul = document.createElement('div');
+    ul.className = 'autocomplete-list';
+    filtered.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.textContent = v;
+      item.onmousedown = () => { inputEl.value = v; ul.remove(); };
+      ul.appendChild(item);
+    });
+    inputEl.parentNode.appendChild(ul);
+  }
+
+  function hideAutocomplete(inputEl) {
+    const existing = inputEl.parentNode.querySelector('.autocomplete-list');
+    if (existing) setTimeout(() => existing.remove(), 150);
+  }
+
   // ===== 공통 변수 =====
   let map1 = null, map2 = null;
   let markerA = null, markerB = null, lineLayer = null;
@@ -454,6 +499,8 @@
     const qA = document.getElementById('placeA').value.trim();
     const qB = document.getElementById('placeB').value.trim();
     if (!qA || !qB) { showError('errorMsg1', '두 장소를 모두 입력해주세요.'); return; }
+    saveHistory('history_placeA', qA);
+    saveHistory('history_placeB', qB);
     showLoading(true);
     document.getElementById('searchBtn1').disabled = true;
     document.getElementById('altSection').classList.remove('show');
@@ -509,6 +556,7 @@
     showError('errorMsg2', '');
     const qLoc = document.getElementById('placeLoc').value.trim();
     if (!qLoc) { showError('errorMsg2', '기준 장소를 입력해주세요.'); return; }
+    saveHistory('history_placeLoc', qLoc);
     showLoading(true);
     document.getElementById('searchBtn2').disabled = true;
     try {
@@ -554,10 +602,11 @@
         listEl.innerHTML = '<div style="padding:12px 16px;color:#aaa;font-size:12px;">반경 내 시설이 없어요. 반경을 늘려보세요.</div>';
       } else {
         listEl.innerHTML = nearby.sort((a,b) => parseInt(a.distance) - parseInt(b.distance)).map(p => `
-          <div class="nearby-item" onclick="openDirection('${p.id}')" style="cursor:pointer;">
-            <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
-            <span class="nearby-name">${p.place_name}</span>
-            <span class="nearby-dist">${p.distance}m 🗺️</span>
+          <div class="nearby-item" style="cursor:pointer;">
+            <span class="nearby-badge ${p._cat === 'hotel' ? 'badge-hotel' : 'badge-food'}" onclick="openDirection('${p.id}')">${p._cat === 'hotel' ? '숙박' : '맛집'}</span>
+            <span class="nearby-name" onclick="openDirection('${p.id}')">${p.place_name}</span>
+            <span class="nearby-dist" onclick="openDirection('${p.id}')">${p.distance}m 🗺️</span>
+            ${p._cat === 'hotel' ? `<span onclick="openHotelPrice('${p.place_name}')" style="background:#1a73e8;color:white;font-size:10px;font-weight:800;padding:3px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0;">최저가</span>` : ''}
           </div>`).join('');
       }
 
@@ -621,11 +670,22 @@
     sessionStorage.setItem('restoreTab', 'explore');
     location.href = `https://place.map.kakao.com/${id}`;
   }
-  // 엔터키
+  function openHotelPrice(name) {
+    window.open('https://www.google.com/travel/search?q=' + encodeURIComponent(name), '_blank');
+  }
+  // 엔터키 + 자동완성
   ['placeA', 'placeB'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+    const el = document.getElementById(id);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+    el.addEventListener('input', () => showAutocomplete(el, 'history_' + id));
+    el.addEventListener('focus', () => showAutocomplete(el, 'history_' + id));
+    el.addEventListener('blur', () => hideAutocomplete(el));
   });
-  document.getElementById('placeLoc').addEventListener('keydown', e => { if (e.key === 'Enter') doExplore(); });
+  const locEl = document.getElementById('placeLoc');
+  locEl.addEventListener('keydown', e => { if (e.key === 'Enter') doExplore(); });
+  locEl.addEventListener('input', () => showAutocomplete(locEl, 'history_placeLoc'));
+  locEl.addEventListener('focus', () => showAutocomplete(locEl, 'history_placeLoc'));
+  locEl.addEventListener('blur', () => hideAutocomplete(locEl));
 </script>
 <script>
 if ('serviceWorker' in navigator) {
