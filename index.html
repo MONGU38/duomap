@@ -455,24 +455,17 @@
     const key = '5a52f309367cebda2580e38890569355';
     const fetchPage = (code, page) =>
       fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=${page}`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json());
+    const pages = radius <= 200 ? [1,2] : radius <= 300 ? [1,2,3] : radius <= 400 ? [1,2,3,4] : [1,2,3,4,5];
     if (cat === 'ALL') {
-      const r1 = await fetchPage('AD5', 1);
-      const r1p2 = await fetchPage('AD5', 2);
-      const r2 = await fetchPage('FD6', 1);
-      const r2p2 = await fetchPage('FD6', 2);
+      const hotelPages = await Promise.all(pages.map(p => fetchPage('AD5', p)));
+      const foodPages = await Promise.all(pages.map(p => fetchPage('FD6', p)));
       return [
-        ...(r1.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
-        ...(r1p2.documents || []).map(d => ({ ...d, _cat: 'hotel' })),
-        ...(r2.documents || []).map(d => ({ ...d, _cat: 'food' })),
-        ...(r2p2.documents || []).map(d => ({ ...d, _cat: 'food' }))
+        ...hotelPages.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: 'hotel' }))),
+        ...foodPages.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: 'food' })))
       ];
     } else {
-      const res1 = await fetchPage(cat, 1);
-      const res2 = await fetchPage(cat, 2);
-      return [
-        ...(res1.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' })),
-        ...(res2.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }))
-      ];
+      const results = await Promise.all(pages.map(p => fetchPage(cat, p)));
+      return results.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' })));
     }
   }
 
