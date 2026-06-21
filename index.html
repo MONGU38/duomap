@@ -223,10 +223,11 @@
 
 <header>
   <div class="pin-icon">📍</div>
-  <div>
+  <div style="flex:1;">
     <div class="logo">위치<span>짝</span></div>
     <div class="subtitle">두 장소의 위치와 거리를 한눈에</div>
   </div>
+  <div onclick="navigator.clipboard.writeText('fbi1588@hanmail.net').then(()=>alert('이메일 주소가 복사됐어요 📋'))" style="cursor:pointer;font-size:11px;color:rgba(255,255,255,0.7);text-align:right;" title="문의: fbi1588@hanmail.net">✉️ fbi1588@hanmail.net</div>
 </header>
 
 <!-- 탭 바 -->
@@ -456,16 +457,24 @@
     const fetchPage = (code, page) =>
       fetch(`https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=${radius}&size=15&page=${page}`, { headers: { Authorization: `KakaoAK ${key}` } }).then(r => r.json());
     const pages = radius <= 200 ? [1,2] : radius <= 300 ? [1,2,3] : radius <= 400 ? [1,2,3,4] : [1,2,3,4,5];
+    const fetchPages = async (code) => {
+      const results = [];
+      for (const p of pages) {
+        const r = await fetchPage(code, p);
+        results.push(...(r.documents || []));
+      }
+      return results;
+    };
     if (cat === 'ALL') {
-      const hotelPages = await Promise.all(pages.map(p => fetchPage('AD5', p)));
-      const foodPages = await Promise.all(pages.map(p => fetchPage('FD6', p)));
+      const hotels = await fetchPages('AD5');
+      const foods = await fetchPages('FD6');
       return [
-        ...hotelPages.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: 'hotel' }))),
-        ...foodPages.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: 'food' })))
+        ...hotels.map(d => ({ ...d, _cat: 'hotel' })),
+        ...foods.map(d => ({ ...d, _cat: 'food' }))
       ];
     } else {
-      const results = await Promise.all(pages.map(p => fetchPage(cat, p)));
-      return results.flatMap(r => (r.documents || []).map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' })));
+      const results = await fetchPages(cat);
+      return results.map(d => ({ ...d, _cat: cat === 'AD5' ? 'hotel' : 'food' }));
     }
   }
 
